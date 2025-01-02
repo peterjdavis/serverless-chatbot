@@ -1,0 +1,7 @@
+aws-sam-cli
+pytest
+requests-auth-aws-sigv4
+aws_lambda_powertools
+aws_xray_sdk
+pyyaml
+moto

@@ -1,0 +1,197 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Serverless Chatbot with Amazon Bedrock
+
+Parameters:
+  APIStageName:
+    Type: String
+    Default: prod
+    Description: API Stage Name
+  BedrockModelId:
+    Type: String
+    Description: Bedrock Model Id to be used by chatbot
+
+Globals: 
+  Function:
+    MemorySize: 128
+    Runtime: python3.13
+    Tracing: Active
+    Architectures:
+      - arm64
+    Environment:
+      Variables:
+        POWERTOOLS_SERVICE_NAME: serverless-chatbot
+        POWERTOOLS_METRICS_NAMESPACE: Powertools
+        LOG_LEVEL: INFO
+
+  Api:
+    OpenApiVersion: '3.0.1'
+    TracingEnabled: true
+
+Resources:
+  ChatbotAPIPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub ${AWS::StackName}-ChatbotAPIPolicy
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - execute-api:Invoke
+            Resource:
+              - !Sub arn:${AWS::Partition}:execute-api:${AWS::Region}:${AWS::AccountId}:${ChatbotApi}/${APIStageName}/*/*
+
+  ChatbotAPIRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaRole
+
+  ChatbotHistoryDDBTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: session_id
+          AttributeType: S
+        - AttributeName: sequence
+          AttributeType: N
+      KeySchema:
+        - AttributeName: session_id
+          KeyType: HASH
+        - AttributeName: sequence
+          KeyType: RANGE
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+        
+  ChatbotApi:
+    DependsOn: APIAccountLoggingRole
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: ChatbotApi
+      StageName: !Ref APIStageName
+      TracingEnabled: true
+      EndpointConfiguration:
+        Type: REGIONAL
+      MethodSettings:
+        - HttpMethod: '*'
+          ResourcePath: '/*'
+          MetricsEnabled: true
+          DataTraceEnabled: true
+          LoggingLevel: 'INFO'
+          ThrottlingRateLimit: 5000
+          ThrottlingBurstLimit: 2500
+      Auth:
+        DefaultAuthorizer: AWS_IAM
+        InvokeRole: !GetAtt ChatbotAPIRole.Arn
+
+  APILoggingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service:
+              - apigateway.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub arn:${AWS::Partition}:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs
+
+  APIAccountLoggingRole:
+    Type: AWS::ApiGateway::Account
+    Properties:
+      CloudWatchRoleArn: !GetAtt APILoggingRole.Arn
+
+  ChatbotLayer:
+    Type: AWS::Serverless::LayerVersion
+    Metadata:
+      BuildMethod: python3.13
+      BuildArchitecture: arm64
+    Properties:
+      LayerName: Chatbot
+      Description: Chatbot layer
+      ContentUri: layers/chatbot
+      CompatibleRuntimes:
+        - python3.13
+      CompatibleArchitectures:
+        - arm64
+      RetentionPolicy: Delete
+ 
+  ChatbotFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.lambda_handler
+      CodeUri: functions/chatbot
+      Description: Chatbot using Amazon Bedrock
+      Environment:
+        Variables:
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+          DDB_TABLE_NAME: !Ref ChatbotHistoryDDBTable
+      Timeout: 30
+      Layers:
+        - !Sub arn:aws:lambda:${AWS::Region}:017000801446:layer:AWSLambdaPowertoolsPythonV3-python313-arm64:5
+        - !Ref ChatbotLayer
+      LoggingConfig:
+        LogGroup: !Ref ChatbotFunctionLogGroup
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: !Ref ChatbotHistoryDDBTable
+        - Version: '2012-10-17' 
+          Statement:
+            - Effect: Allow
+              Action:
+                - bedrock:InvokeModel
+              Resource:
+                - !Sub arn:${AWS::Partition}:bedrock:${AWS::Region}::foundation-model/${BedrockModelId}
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /chat
+            Method: POST
+            RestApiId: !Ref ChatbotApi            
+      Tags:
+        LambdaPowertools: python
+
+  ChatbotFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${AWS::StackName}-ChatbotFunction
+      RetentionInDays: 7
+
+Outputs:
+  ChatbotApi:
+    Description: API Gateway endpoint URL for Prod environment for Hello World Function
+    Value: !Sub "https://${ChatbotApi}.execute-api.${AWS::Region}.amazonaws.com/${APIStageName}/chat"
+
+  ChatbotAPIPolicy:
+    Description: ARN of the API Policy
+    Value: !Ref ChatbotAPIPolicy
+
+  ChatbotFunction:
+    Description: Hello World Lambda Function ARN
+    Value: !GetAtt ChatbotFunction.Arn
+
+  ChatbotHistoryDDBTable:
+    Description: Name of the DynamoDB table used for storing chat history
+    Value: !Ref ChatbotHistoryDDBTable

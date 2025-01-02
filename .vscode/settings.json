@@ -1,0 +1,15 @@
+{
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": [
+        "tests/"
+    ],
+    "makefile.configureOnOpen": false,
+    "python.analysis.extraPaths": [
+        "./layers/chatbot",
+        "./functions"
+    ],
+    "cSpell.words": [
+        "powertools"
+    ],
+}
