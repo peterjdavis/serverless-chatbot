@@ -82,6 +82,7 @@ If you are using an IDE such as [VSCode](https://code.visualstudio.com/), you ca
    1. Navigate to the appropriate test file in *tests/unit/* or *tests/integration/*
    1. Set a breakpoint where you would like to start debugging
    1. Next to the test (any function starting with the word 'test') there will be a green triangle, right click on this and choose 'Debug Test'
+   
    ![Screenshot of VSCode Test Menu](images/StartTestDebugging.jpg)
    1. The execution will then pause when the breakpoint is reached and you can use the standard debugging toolbar to step through the code
    
