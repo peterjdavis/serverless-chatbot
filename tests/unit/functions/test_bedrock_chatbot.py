@@ -20,6 +20,7 @@ test_messages = [
 
 orig = botocore.client.BaseClient._make_api_call
 
+
 def mock_make_api_call(self, operation_name, kwarg):
     if operation_name == "Converse":
         response = {
@@ -48,16 +49,13 @@ def mock_make_api_call(self, operation_name, kwarg):
 
         # Check to see if responding to the first message in the conversation
         if len(kwarg["messages"]) == 1:
-            response["output"]["message"]["content"][0][
-                "text"
-            ] = test_messages[1]
+            response["output"]["message"]["content"][0]["text"] = test_messages[1]
             return response
         if len(kwarg["messages"]) == 3:
-            response["output"]["message"]["content"][0][
-                "text"
-            ] = test_messages[3]
+            response["output"]["message"]["content"][0]["text"] = test_messages[3]
             return response
     return orig(self, operation_name, kwarg)
+
 
 @mock_aws
 class TestBedrockChatbot:
@@ -76,9 +74,7 @@ class TestBedrockChatbot:
         # Get test event that is in the format of a REST API Gateway proxy integration
         event = chatbot_lambda_event
         # Set the event body with the prompt to be used for testing and an empty list of messages (as first message in the conversation)
-        event["body"] = json.dumps(
-            {"prompt": test_messages[0], "messages": []}
-        )
+        event["body"] = json.dumps({"prompt": test_messages[0], "messages": []})
         # Mock the Bedrock API call and invoke the lambda handler
         with patch("botocore.client.BaseClient._make_api_call", new=mock_make_api_call):
             response = lambda_handler(event, base_lambda_context)
@@ -93,7 +89,7 @@ class TestBedrockChatbot:
         assert body["messages"][0]["content"][0]["text"] == test_messages[0]
         assert body["messages"][1]["role"] == "assistant"
         assert body["messages"][1]["content"][0]["text"] == test_messages[1]
-        
+
     def test_chatbot_two_messages_success(
         self,
         bedrock_model_id,
@@ -109,13 +105,11 @@ class TestBedrockChatbot:
         # Get test event that is in the format of a REST API Gateway proxy integration
         event = chatbot_lambda_event
         # Set the event body with the prompt to be used for testing and an empty list of messages (as first message in the conversation)
-        event["body"] = json.dumps(
-            {"prompt": test_messages[0], "messages": []}
-        )
+        event["body"] = json.dumps({"prompt": test_messages[0], "messages": []})
         # Mock the Bedrock API call and invoke the lambda handler
         with patch("botocore.client.BaseClient._make_api_call", new=mock_make_api_call):
             response = lambda_handler(event, base_lambda_context)
-        
+
         # Check the response from the lambda handler is a 200
         assert response["statusCode"] == 200
         body = json.loads(response["body"])
@@ -132,7 +126,7 @@ class TestBedrockChatbot:
         # Add another prompt for the second call to the lambda handler
         event_body["prompt"] = test_messages[2]
         event["body"] = json.dumps(event_body)
-        
+
         # Mock the Bedrock API call and invoke the lambda handler with the new prompt and the existing messages
         with patch("botocore.client.BaseClient._make_api_call", new=mock_make_api_call):
             response = lambda_handler(event, base_lambda_context)
@@ -146,4 +140,4 @@ class TestBedrockChatbot:
         assert body["messages"][2]["role"] == "user"
         assert body["messages"][2]["content"][0]["text"] == test_messages[2]
         assert body["messages"][3]["role"] == "assistant"
-        assert body["messages"][3]["content"][0]["text"] == test_messages[3]    
+        assert body["messages"][3]["content"][0]["text"] == test_messages[3]
