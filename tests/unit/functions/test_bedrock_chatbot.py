@@ -54,27 +54,35 @@ def mock_make_api_call(self, operation_name, kwarg):
 
 @mock_aws
 class TestBedrockChatbot:
-    def test_chatbot_first_message_success(
+    def test_chatbot_one_message_success(
         self,
         bedrock_model_id,
         chatbot_lambda_event,
         base_lambda_context,
         create_ddb_table,
     ):
+        # The lambda function retrieves the Bedrock model ID environment variable outside the handler. It therefore needs to be set before the function is imported
         os.environ["BEDROCK_MODEL_ID"] = bedrock_model_id
+        # Import the lambda handler function from the chatbot app
         from chatbot.app import lambda_handler
 
+        # Get test event that is in the format of a REST API Gateway proxy integration
         event = chatbot_lambda_event
+        # Set the event body with the prompt to be used for testing and an empty list of messages (as first message in the conversation)
         event["body"] = json.dumps(
             {"prompt": "Create me a nursery rhyme about goats", "messages": []}
         )
+        # Mock the Bedrock API call and invoke the lambda handler
         with patch("botocore.client.BaseClient._make_api_call", new=mock_make_api_call):
             response = lambda_handler(event, base_lambda_context)
+        # Verify the response status code is 200 (success)
         assert response["statusCode"] == 200
+        # Parse the response body
         body = json.loads(response["body"])
+        # Verify there are 2 messages in the conversation (prompt and response)
         assert len(body["messages"]) == 2
 
-    def test_chatbot_second_message_success(
+    def test_chatbot_two_messages_success(
         self,
         bedrock_model_id,
         chatbot_lambda_event,
