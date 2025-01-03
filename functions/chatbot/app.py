@@ -44,8 +44,6 @@ def handle_validation_error(ex: RequestValidationError):
 @app.post("/chat")
 @tracer.capture_method
 def chat(event: Event):
-    metrics.add_metric(name="HelloWorldInvocations", unit=MetricUnit.Count, value=1)
-
     system_prompts = [
         {
             "text": "You are a chatbot that responses to user prompts, if you don't know an answer say I'm sorry I don't know.  Ensure responses are accurate and not offensive"
@@ -56,7 +54,7 @@ def chat(event: Event):
         messages = Messages.from_message_list(
             session_id=event.session_id, messages=event.messages
         )
-        
+
         content = ContentItem(text=event.prompt)
         message = Message(role="user", content=[content])
         messages.append(message)
