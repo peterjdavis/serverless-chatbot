@@ -2,6 +2,8 @@ import json
 import os
 import sys
 
+from importlib import reload
+
 sys.path.append(os.path.join(os.getcwd(), "functions"))
 sys.path.append(os.path.join(os.getcwd(), "layers", "chatbot"))
 
@@ -17,6 +19,8 @@ class TestBedrockChatbotFunction:
         os.environ["BEDROCK_MODEL_ID"] = bedrock_model_id
         os.environ["DDB_TABLE_NAME"] = ddb_table_name
         from chatbot.app import lambda_handler
+        # Force reload so code outside the handler is re-executed
+        app = reload(sys.modules["chatbot.app"])
 
         event = chatbot_lambda_event
         event["body"] = json.dumps(
@@ -37,6 +41,8 @@ class TestBedrockChatbotFunction:
         os.environ["BEDROCK_MODEL_ID"] = bedrock_model_id
         os.environ["DDB_TABLE_NAME"] = ddb_table_name
         from chatbot.app import lambda_handler
+        # Force reload so code outside the handler is re-executed
+        app = reload(sys.modules["chatbot.app"])
 
         event = chatbot_lambda_event
         event["body"] = json.dumps(

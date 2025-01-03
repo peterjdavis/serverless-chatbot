@@ -100,7 +100,7 @@ class APIRole:
         return auth
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def get_region():
     region_checks = [
         # check if set through ENV vars
@@ -115,18 +115,18 @@ def get_region():
             return region
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def stack_name(get_config):
     return get_config["stack_name"]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def api_access_policy_arn(stack_outputs):
     api_access_policy_arn = stack_outputs["ChatbotAPIPolicy"]
     return api_access_policy_arn
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def stack_outputs(stack_name):
     """Fixture to retrieve CloudFormation stack outputs."""
     cfn_client = boto3.client("cloudformation")
@@ -146,17 +146,17 @@ def stack_outputs(stack_name):
         raise Exception(f"Error retrieving stack outputs: {str(e)}")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def chatbot_api_uri(stack_outputs):
     chatbot_api_uri = stack_outputs["ChatbotApi"]
     return chatbot_api_uri
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def ddb_table_name(stack_outputs):
     ddb_table_name = stack_outputs["ChatbotHistoryDDBTable"]
     return ddb_table_name
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def api_success_request_auth(get_region, stack_name, api_access_policy_arn):
 
     aws_region = get_region

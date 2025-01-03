@@ -8,7 +8,7 @@ from aws_lambda_powertools.event_handler.openapi.exceptions import (
 )
 from aws_lambda_powertools.utilities.typing import LambdaContext
 from aws_lambda_powertools.logging import correlation_paths
-from aws_lambda_powertools import Logger, Tracer, Metrics
+from aws_lambda_powertools import Logger, Tracer
 from aws_lambda_powertools.metrics import MetricUnit
 
 from botocore.exceptions import ClientError
@@ -21,12 +21,11 @@ import os
 app = APIGatewayRestResolver(enable_validation=True)
 tracer = Tracer()
 logger = Logger()
-metrics = Metrics(namespace="Powertools")
 
 MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 DDB_TABLE_NAME = os.environ["DDB_TABLE_NAME"]
-chatbot_client = Chatbot(MODEL_ID, DDB_TABLE_NAME)
 
+chatbot_client = Chatbot(MODEL_ID, DDB_TABLE_NAME)
 
 @app.exception_handler(RequestValidationError)
 def handle_validation_error(ex: RequestValidationError):
@@ -65,15 +64,16 @@ def chat(event: Event):
         message = err.response["Error"]["Message"]
         logger.error("A client error occurred: %s", message)
         print(f"A client error occurred: {message}")
+        raise
     except Exception as err:
         logger.error("An error occurred: %s", err)
         print(f"An error occurred: {err}")
+        raise
 
     return messages
 
 
 @logger.inject_lambda_context(correlation_id_path=correlation_paths.API_GATEWAY_REST)
 @tracer.capture_lambda_handler
-@metrics.log_metrics(capture_cold_start_metric=True)
 def lambda_handler(event: dict, context: LambdaContext) -> dict:
     return app.resolve(event, context)
