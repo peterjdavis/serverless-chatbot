@@ -1,4 +1,5 @@
 import json
+import boto3
 import botocore.client
 import os
 import sys
@@ -90,6 +91,19 @@ class TestBedrockChatbot:
         assert body["messages"][1]["role"] == "assistant"
         assert body["messages"][1]["content"][0]["text"] == test_messages[1]
 
+        # Get the items currently in the DDB table for the session
+        session_id = body["session_id"]
+        items = self._get_current_items(session_id)
+
+        # Verify the ddb records are as expected
+        assert len(items) == 2
+        assert items[0]["session_id"] == session_id
+        assert items[0]["role"] == "user"
+        assert items[0]["content"][0]["text"] == test_messages[0]
+        assert items[1]["session_id"] == session_id
+        assert items[1]["role"] == "assistant"
+        assert items[1]["content"][0]["text"] == test_messages[1]
+
     def test_chatbot_two_messages_success(
         self,
         bedrock_model_id,
@@ -121,6 +135,19 @@ class TestBedrockChatbot:
         assert body["messages"][1]["role"] == "assistant"
         assert body["messages"][1]["content"][0]["text"] == test_messages[1]
 
+        # Get the items currently in the DDB table for the session
+        session_id = body["session_id"]
+        items = self._get_current_items(session_id)
+
+        # Verify the ddb records are as expected
+        assert len(items) == 2
+        assert items[0]["session_id"] == session_id
+        assert items[0]["role"] == "user"
+        assert items[0]["content"][0]["text"] == test_messages[0]
+        assert items[1]["session_id"] == session_id
+        assert items[1]["role"] == "assistant"
+        assert items[1]["content"][0]["text"] == test_messages[1]
+
         # Retrieve the response body from the lambda handler response, this includes the user prompt and the assistant response as messages
         event_body = json.loads(response["body"])
         # Add another prompt for the second call to the lambda handler
@@ -141,3 +168,32 @@ class TestBedrockChatbot:
         assert body["messages"][2]["content"][0]["text"] == test_messages[2]
         assert body["messages"][3]["role"] == "assistant"
         assert body["messages"][3]["content"][0]["text"] == test_messages[3]
+
+        # Get the items currently in the DDB table for the session
+        session_id = body["session_id"]
+        items = self._get_current_items(session_id)
+
+        # Verify the ddb records are as expected
+        assert len(items) == 4
+        assert items[2]["session_id"] == session_id
+        assert items[2]["role"] == "user"
+        assert items[2]["content"][0]["text"] == test_messages[2]
+        assert items[3]["session_id"] == session_id
+        assert items[3]["role"] == "assistant"
+        assert items[3]["content"][0]["text"] == test_messages[3]
+
+    # Get the current items from the mock DDB table based on the session id.
+    def _get_current_items(self, session_id):
+        table_name = os.environ["DDB_TABLE_NAME"]
+        ddb_resource = boto3.resource("dynamodb")
+        ddb_table = ddb_resource.Table(table_name)
+
+        response = ddb_table.query(
+            KeyConditions={
+                "session_id": {
+                    "AttributeValueList": [session_id],
+                    "ComparisonOperator": "EQ",
+                }
+            }
+        )
+        return response["Items"]
