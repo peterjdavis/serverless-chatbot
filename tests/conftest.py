@@ -21,7 +21,7 @@ def base_lambda_context():
     return LambdaContext()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def chatbot_lambda_event():
     return {
         "body": None,
@@ -76,13 +76,13 @@ def chatbot_lambda_event():
     }
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def get_config():
     with open("config.yaml", "r") as file:
         config = yaml.safe_load(file)
     return config
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def bedrock_model_id(get_config):
     return get_config["bedrock_model_id"]
