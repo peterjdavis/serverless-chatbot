@@ -5,6 +5,7 @@ import os
 import sys
 import pytest
 
+from importlib import reload
 from unittest.mock import patch
 from moto import mock_aws
 
@@ -71,7 +72,8 @@ class TestBedrockChatbot:
         os.environ["BEDROCK_MODEL_ID"] = bedrock_model_id
         # Import the lambda handler function from the chatbot app
         from chatbot.app import lambda_handler
-
+        # Force reload so code outside the handler is re-executed
+        app = reload(sys.modules["chatbot.app"])
         # Get test event that is in the format of a REST API Gateway proxy integration
         event = chatbot_lambda_event
         # Set the event body with the prompt to be used for testing and an empty list of messages (as first message in the conversation)
@@ -115,6 +117,8 @@ class TestBedrockChatbot:
         os.environ["BEDROCK_MODEL_ID"] = bedrock_model_id
         # Import the lambda handler function from the chatbot app
         from chatbot.app import lambda_handler
+        # Force reload so code outside the handler is re-executed
+        app = reload(sys.modules["chatbot.app"])
 
         # Get test event that is in the format of a REST API Gateway proxy integration
         event = chatbot_lambda_event

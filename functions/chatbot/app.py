@@ -22,6 +22,10 @@ app = APIGatewayRestResolver(enable_validation=True)
 tracer = Tracer()
 logger = Logger()
 
+MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
+DDB_TABLE_NAME = os.environ["DDB_TABLE_NAME"]
+
+chatbot_client = Chatbot(MODEL_ID, DDB_TABLE_NAME)
 
 @app.exception_handler(RequestValidationError)
 def handle_validation_error(ex: RequestValidationError):
@@ -39,11 +43,6 @@ def handle_validation_error(ex: RequestValidationError):
 @app.post("/chat")
 @tracer.capture_method
 def chat(event: Event):
-    MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
-    DDB_TABLE_NAME = os.environ["DDB_TABLE_NAME"]
-
-    chatbot_client = Chatbot(MODEL_ID, DDB_TABLE_NAME)
-
     system_prompts = [
         {
             "text": "You are a chatbot that responses to user prompts, if you don't know an answer say I'm sorry I don't know.  Ensure responses are accurate and not offensive"
