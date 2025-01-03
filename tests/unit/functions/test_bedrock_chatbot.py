@@ -60,7 +60,7 @@ def mock_make_api_call(self, operation_name, kwarg):
 
 @mock_aws
 class TestBedrockChatbot:
-    def test_chatbot_one_message_success(
+    def test_chatbot_one_interaction_success(
         self,
         bedrock_model_id,
         chatbot_lambda_event,
@@ -104,7 +104,7 @@ class TestBedrockChatbot:
         assert items[1]["role"] == "assistant"
         assert items[1]["content"][0]["text"] == test_messages[1]
 
-    def test_chatbot_two_messages_success(
+    def test_chatbot_two_interaction_success(
         self,
         bedrock_model_id,
         chatbot_lambda_event,
